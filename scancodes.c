@@ -151,6 +151,9 @@ scancode set2[] = {
    {0x11, KEY_LALT, 0, 0},
    {0x11, KEY_RALT, 0, 0, 1},
    {0x14, KEY_RCTRL, 0, 0, 1},
+   {0x1f, KEY_LWIN, 0, 0, 1},
+   {0x27, KEY_RWIN, 0, 0, 1},
+   {0x2f, KEY_MENU, 0, 0, 1},
 
    {0x72, KEY_DOWN, 0, 0, 1},
    {0x75, KEY_UP, 0, 0, 1},

@@ -1,4 +1,4 @@
-CFLAGS=-I/opt/vc/include
+CFLAGS=-g -I/opt/vc/include
 LIBS=-lbcm_host -lncurses
 LDFLAGS=-L/opt/vc/lib $(LIBS)
 

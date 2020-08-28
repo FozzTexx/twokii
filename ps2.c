@@ -13,7 +13,7 @@ static inline void ps2usleep(double usec)
   struct timeval begin, now;
 
 
-  if (usec > 1000) {
+  if (usec > 500) {
     ts.tv_sec = 0;
     ts.tv_nsec = usec * 1000;
     nanosleep(&ts, &rem);
@@ -30,6 +30,31 @@ static inline void ps2usleep(double usec)
   }
   
   return;
+}
+
+int ps2waitfordata()
+{
+  struct timeval begin, now;
+  long long elapsed;
+  int clk, dat;
+
+
+  pinMode(PIN_CLK, INPUT);
+  pinMode(PIN_DAT, INPUT);
+  gettimeofday(&begin, NULL);
+  for (;;) {
+    clk = digitalRead(PIN_CLK);
+    dat = digitalRead(PIN_DAT);
+    if (clk == 1 && dat == 0)
+      return 1;
+    gettimeofday(&now, NULL);
+    elapsed = (now.tv_sec - begin.tv_sec) * 1000000LL +
+      now.tv_usec - begin.tv_usec;
+    if (elapsed > 60)
+      return 0;
+  }
+
+  return 0;
 }
 
 int ps2clockout(int bit)
@@ -78,7 +103,7 @@ int ps2read()
     gettimeofday(&now, NULL);
     elapsed = (now.tv_sec - begin.tv_sec) * 1000000LL +
       now.tv_usec - begin.tv_usec;
-    if (elapsed > 100000)
+    if (elapsed > 1000)
       return -1;
   }
 
@@ -108,8 +133,10 @@ int ps2writebyte(int data)
 
 
   clk = digitalRead(PIN_CLK);
-  if (clk == 0)
+  if (clk == 0 && ps2waitfordata()) {
+    printf("Blocked\r\n");
     return 0;
+  }
 
   ps2usleep(BYTEWAIT);
   clk = ps2clockout(0);
@@ -119,15 +146,19 @@ int ps2writebyte(int data)
   for (idx = 0; idx < 8; idx++) {
     bit = data & 0x01;
     clk = ps2clockout(bit);
-    if (!clk)
+    if (!clk) {
+      printf("Bit blocked\r\n");
       return 0;
+    }
     parity ^= bit;
     data >>= 1;
   }
 
   clk = ps2clockout(parity);
-  if (!clk)
+  if (!clk) {
+    printf("Stop blocked\r\n");
     return 0;
+  }
 
   // stop bit
   ps2clockout(1);
@@ -215,16 +246,88 @@ void ps2keyup(scancode *sc)
   return;
 }
 
+void ps2ack()
+{
+  char buf[1] = {0xFA};
+
+
+  ps2write(buf, 1);
+}
+
 void ps2received(int data)
 {
   unsigned char buf[10];
+  int val;
   
 
+  if (data < 0)
+    return;
+  
   printf("Read: 0x%02x\r\n", data);
 
   switch (data) {
-  case 0xF4:
-    buf[0] = 0xFA;
+  case 0xED: /* LEDs */
+    ps2ack();
+    printf("Sent ack\r\n");
+    val = ps2read();
+    if (val >= 0) {
+      ps2ack();
+      printf("LEDs: 0x%02x\r\n", val);
+    }
+    else {
+      printf("No LEDs\r\n");
+    }
+    break;
+
+  case 0xF0: /* Get/change scancode set */
+    ps2ack();
+    val = ps2read();
+    if (val >= 0) {
+      ps2ack();
+      printf("Scancode: 0x%02x\r\n", val);
+      if (val == 0) {
+	buf[0] == 0x02;
+	ps2write(buf, 1);
+      }
+    }
+    else {
+      printf("No LEDs\r\n");
+    }
+    break;    
+    
+  case 0xF2: /* Get device ID */
+    ps2ack();
+    buf[0] = 0xAB;
+    buf[1] = 0x83;
+    ps2write(buf, 2);
+    break;
+
+  case 0xF3: /* Set typematic rate */
+    ps2ack();
+    val = ps2read();
+    if (val >= 0) {
+      ps2ack();
+      printf("Rate: 0x%02x\r\n", val);
+    }
+    else {
+      printf("No rate\r\n");
+    }
+    break;
+    
+  case 0xF4: /* Enable sending keys */
+    ps2ack();
+    break;
+
+  case 0xF5: /* Disable sending keys */
+    ps2ack();
+    break;
+
+  case 0xF6: /* Set defaults */
+    ps2ack();
+    break;
+
+  case 0xFF: /* Reset */
+    buf[0] = 0xAA;
     ps2write(buf, 1);
     break;
 
