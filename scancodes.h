@@ -47,4 +47,6 @@ typedef struct {
 
 extern scancode set2[];
 
+extern scancode *scancodeForKey(scancode set[], int key);
+
 #endif /* SCANCODES_H */

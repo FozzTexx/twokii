@@ -3,18 +3,26 @@
 
 #include "scancodes.h"
 
-#define PIN_CLK		17
-#define PIN_DAT		27
-
 #define BYTEWAIT	1000
 
-extern int ps2clockout(int bit);
-extern int ps2clockin();
-extern int ps2read();
-extern int ps2writebyte(int data);
-extern void ps2write(unsigned char *data, unsigned int len);
-extern void ps2keydown(scancode *sc);
-extern void ps2keyup(scancode *sc);
-extern void ps2received(int data);
+enum {
+  PS2_KEYBOARD,
+  PS2_MOUSE,
+};
+  
+typedef struct {
+  int type;
+  int clock, data, fd;
+} ps2port;
+
+extern void ps2init(ps2port *port, int type, int clock, int data);
+extern int ps2clockout(ps2port *port, int bit);
+extern int ps2clockin(ps2port *port);
+extern int ps2read(ps2port *port);
+extern int ps2writebyte(ps2port *port, int data);
+extern void ps2write(ps2port *port, unsigned char *data, unsigned int len);
+extern void ps2keydown(ps2port *port, scancode *sc);
+extern void ps2keyup(ps2port *port, scancode *sc);
+extern void ps2received(ps2port *port, int data);
 
 #endif /* PS2_H */

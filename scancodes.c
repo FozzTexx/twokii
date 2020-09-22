@@ -138,6 +138,7 @@ scancode set2[] = {
 
    {0x66, KEY_BACKSPACE, 0, 0, 0},
    {0x0D, KEY_TAB, 0, 0, 0},
+   {0x0D, KEY_BTAB, 1, 0, 0},
    {0x5A, KEY_ENTER, 0, 0, 0},
    {0x76, KEY_ESC, 0, 0, 0},
    
@@ -203,3 +204,15 @@ scancode set2[] = {
    {-1, -1, 0, 0, 0},
   };
 
+scancode *scancodeForKey(scancode set[], int key)
+{
+  int idx;
+  
+  for (idx = 0; set[idx].code >= 0; idx++) {
+    if (set[idx].c == key)
+      return &set[idx];
+  }
+
+  /* No matching scancode found, ignore key */
+  return NULL;
+}

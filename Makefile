@@ -7,3 +7,6 @@ ps2key.o: ps2key.c scancodes.h gpio.h ps2.h
 ps2.o: ps2.c ps2.h gpio.h
 gpio.o: gpio.h gpio.c
 scancodes.o: scancodes.h scancodes.c
+
+clean:
+	rm ps2key *.o
