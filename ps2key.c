@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
   keypad(w, TRUE);
   noecho();
   nodelay(w, TRUE);
+  refresh();
 
   keyShift = scancodeForKey(keyset, KEY_LSHIFT);
   keyCtrl = scancodeForKey(keyset, KEY_LCTRL);
@@ -173,45 +174,46 @@ int main(int argc, char *argv[])
 	  /* Mouse emulation */
 	  int x, y;
 	  static int bl = 0, br = 0;
+	  static int speed = 10;
 	  unsigned char m[3];
 
 
 	  x = y = 0;
 	  switch (c) {
 	  case KEY_KP4:
-	    x -= 10;
+	    x -= speed;
 	    break;
 
 	  case KEY_KP6:
-	    x += 10;
+	    x += speed;
 	    break;
 
 	  case KEY_KP8:
-	    y += 10;
+	    y += speed;
 	    break;
 
 	  case KEY_KP2:
-	    y -= 10;
+	    y -= speed;
 	    break;
 
 	  case KEY_KP7:
-	    x -= 10;
-	    y += 10;
+	    x -= speed;
+	    y += speed;
 	    break;
 
 	  case KEY_KP9:
-	    x += 10;
-	    y += 10;
+	    x += speed;
+	    y += speed;
 	    break;
 
 	  case KEY_KP1:
-	    x -= 10;
-	    y -= 10;
+	    x -= speed;
+	    y -= speed;
 	    break;
 
 	  case KEY_KP3:
-	    x += 10;
-	    y -= 10;
+	    x += speed;
+	    y -= speed;
 	    break;
 
 	  case KEY_KP5:
@@ -220,6 +222,16 @@ int main(int argc, char *argv[])
 
 	  case KEY_KPDOT:
 	    br = !br;
+	    break;
+
+	  case KEY_KPSUB:
+	    speed -= 10;
+	    if (speed < 10)
+	      speed = 10;
+	    break;
+
+	  case KEY_KPADD:
+	    speed += 10;
 	    break;
 	  }
 
@@ -231,7 +243,7 @@ int main(int argc, char *argv[])
 	  m[2] = y & 0xFF;
 	  printf("Sending mouse %i %i 0x%02x 0x%02x 0x%02x\r\n",
 		 x, y, m[0], m[1], m[2]);
-	  ps2write(&mouse, m, 3);
+	  //ps2write(&mouse, m, 3);
 	}
 	else {
 	  sc = scancodeForKey(keyset, c);

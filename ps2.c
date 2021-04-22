@@ -226,23 +226,29 @@ int ps2writebyte(ps2port *port, int data)
   sent++;
   ps2usleep(BYTEWAIT);
 
-  printf("%s wrote %i bits\r\n", kms(port), sent);
+  //printf("%s wrote %i bits\r\n", kms(port), sent);
   return 1;
 }
 
 void ps2write(ps2port *port, unsigned char *data, unsigned int len)
 {
   unsigned int idx;
-  int sent;
+  int done = 0, sent;
   int c;
 
-
-  for (idx = 0; idx < len; idx++) {
-    sent = ps2writebyte(port, data[idx]);
-    if (!sent) {
-      idx--;
-      c = ps2read(port);
-      ps2received(port, c);
+  while (!done) {
+    done = 1;
+    for (idx = 0; idx < len; idx++) {
+      sent = ps2writebyte(port, data[idx]);
+      if (!sent) {
+	idx--;
+	c = ps2read(port);
+	if (c >= 0) {
+	  ps2received(port, c);
+	  done = 0;
+	  break;
+	}
+      }
     }
   }
 
@@ -313,6 +319,14 @@ void ps2ack(ps2port *port)
   ps2write(port, buf, 1);
 }
 
+void ps2nack(ps2port *port)
+{
+  char buf[1] = {0xFE};
+
+
+  ps2write(port, buf, 1);
+}
+
 void ps2keyboardreceived(ps2port *port, int data)
 {
   unsigned char buf[10];
@@ -324,25 +338,18 @@ void ps2keyboardreceived(ps2port *port, int data)
     ps2ack(port);
     printf("%s Sent ack\r\n", kms(port));
     val = ps2waitread(port);
-    if (val >= 0) {
-      ps2ack(port);
-      printf("%s LEDs: 0x%02x\r\n", kms(port), val);
-    }
-    else {
-      printf("%s No LEDs\r\n", kms(port));
-    }
+    ps2ack(port);
+    printf("%s LEDs: 0x%02x\r\n", kms(port), val);
     break;
 
   case 0xF0: /* Get/change scancode set */
     ps2ack(port);
     val = ps2waitread(port);
-    if (val >= 0) {
-      ps2ack(port);
-      printf("%s Scancode: 0x%02x\r\n", kms(port), val);
-      if (val == 0) {
-	buf[0] == 0x02;
-	ps2write(port, buf, 1);
-      }
+    ps2ack(port);
+    printf("%s Scancode: 0x%02x\r\n", kms(port), val);
+    if (val == 0) {
+      buf[0] == 0x02;
+      ps2write(port, buf, 1);
     }
     break;    
     
@@ -356,13 +363,8 @@ void ps2keyboardreceived(ps2port *port, int data)
   case 0xF3: /* Set typematic rate */
     ps2ack(port);
     val = ps2waitread(port);
-    if (val >= 0) {
-      ps2ack(port);
-      printf("%s Rate: 0x%02x\r\n", kms(port), val);
-    }
-    else {
-      printf("%s No rate\r\n", kms(port));
-    }
+    ps2ack(port);
+    printf("%s Rate: 0x%02x\r\n", kms(port), val);
     break;
     
   case 0xF4: /* Enable sending keys */
@@ -407,8 +409,14 @@ void ps2mousereceived(ps2port *port, int data)
   case 0xE8: /* Set resolution */
     ps2ack(port);
     val = ps2waitread(port);
-    ps2ack(port);
     printf("%s resolution: 0x%02x\r\n", kms(port), val);
+    if (val != 0 && val != 1 && val != 2 && val != 3) {
+      printf("%s BOGUS\r\n", kms(port));
+      ps2mousereceived(port, val);
+      //ps2nack(port);
+    }
+    else
+      ps2ack(port);
     break;
 
   case 0xE9: /* Status request */
@@ -449,13 +457,20 @@ void ps2mousereceived(ps2port *port, int data)
     ps2ack(port);
     buf[0] = 0x00;
     ps2write(port, buf, 1);
+    printf("%s Sent 0x%02x\r\n", kms(port), buf[0]);
     break;
 
   case 0xF3: /* Set sample rate */
     ps2ack(port);
     val = ps2waitread(port);
-    ps2ack(port);
     printf("%s Sample rate: 0x%02x\r\n", kms(port), val);
+    if (val != 10 && val != 20 && val != 40 && val != 80 && val != 100 && val != 200) {
+      printf("%s BOGUS\r\n", kms(port));
+      ps2mousereceived(port, val);
+      //ps2nack(port);
+    }
+    else
+      ps2ack(port);
     break;
     
   case 0xF4: /* Enable data reporting */
@@ -484,6 +499,7 @@ void ps2mousereceived(ps2port *port, int data)
     break;
 
   default:
+    ps2nack(port);
     break;
   }
 
